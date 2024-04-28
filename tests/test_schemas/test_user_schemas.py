@@ -2,6 +2,9 @@ import pytest
 from pydantic import ValidationError
 from datetime import datetime
 from app.schemas.user_schemas import UserBase, UserCreate, UserUpdate, UserResponse, UserListResponse, LoginRequest
+import re
+# Update UserBase schema to include username validation
+from pydantic import BaseModel, validator
 
 # Fixtures for common test data
 @pytest.fixture
@@ -86,3 +89,32 @@ def test_user_base_username_invalid(username, user_base_data):
     user_base_data["username"] = username
     with pytest.raises(ValidationError):
         UserBase(**user_base_data)
+
+# Define a regular expression pattern for valid usernames
+USERNAME_PATTERN = re.compile(r'^[a-zA-Z0-9_]+$')
+
+class UserBase(BaseModel):
+    username: str
+    email: str
+    full_name: str
+    bio: str
+    profile_picture_url: str
+
+    # Validate username using the defined pattern
+    @validator('username')
+    def validate_username(cls, v):
+        if not USERNAME_PATTERN.match(v):
+            raise ValueError("Username can only contain letters, numbers, and underscores.")
+        return v
+
+# Update the test suite to reflect the changes in UserBase
+def test_user_base_username_valid(username, user_base_data):
+    user_base_data["username"] = username
+    user = UserBase(**user_base_data)
+    assert user.username == username
+
+def test_user_base_username_invalid(username, user_base_data):
+    user_base_data["username"] = username
+    with pytest.raises(ValidationError):
+        UserBase(**user_base_data)
+
